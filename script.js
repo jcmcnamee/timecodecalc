@@ -1,4 +1,3 @@
-const smpteInput = document.getElementById('tcInput');
 const buttons = document.querySelectorAll('.btn');
 const keypad = document.getElementById('keypad');
 const display = document.getElementById('screen-panel');
@@ -10,63 +9,25 @@ class Calculator {
     this.fps = 25;
     this.stack = [];
     this.mode = 'timecode';
+    this.input = document.getElementById('tcInput');
 
     this.inputHandler = this.inputHandler.bind(this);
     this.keyHandler = this.keyHandler.bind(this);
 
-    smpteInput.addEventListener('input', this.inputHandler);
+    this.input.addEventListener('input', this.inputHandler);
     document.addEventListener('keydown', this.keyHandler);
   }
-  #timecode = '';
   #operator = '';
-  #totalSeconds = null;
-  #totalFrames = null;
-  #total = '';
 
-  // Operator set and get
-  set operator(operator) {
-    this.#operator = operator;
+  // Setters and getters
+  set smpteInput(value) {
+    this.input.value = value;
   }
-  get operator() {
-    return this.#operator;
-  }
-
-  // Current timecode set and get
-  set timecode(timecode) {
-    this.#timecode = timecode;
-  }
-  get timecode() {
-    return this.#timecode;
-  }
-
-  // Get latest stack entry
-  get latestStack() {
-    console.log(this.stack[this.stack.length - 1]);
-    return this.stack[this.stack.length - 1];
-  }
-
-  // Set answer
-  set total(total) {
-    this.#total = total;
+  get smpteInput() {
+    return this.input.value;
   }
   get total() {
-    return this.#total;
-  }
-
-  // Total frame count set and get
-  set totalFrames(frames) {
-    this.#totalFrames = frames;
-  }
-  get totalFrames() {
-    return this.#totalFrames;
-  }
-
-  // Total seconds set and get
-  set totalSeconds(seconds) {
-    this.#totalSeconds = seconds;
-  }
-  get totalSeconds() {
-    return this.#totalSeconds;
+    return this.stack[this.stack.length - 1];
   }
 
   /////////////////// Methods
@@ -92,8 +53,7 @@ class Calculator {
       }
     }
     // Update instance and UI
-    this.timecode = formattedVal;
-    this.updateSMPTEInput();
+    this.smpteInput = formattedVal;
   }
 
   keyHandler(e) {
@@ -101,8 +61,7 @@ class Calculator {
       case '+':
         if (this.validateInput()) {
           this.processTimecode(e.key);
-          this.timecode = '';
-          this.updateSMPTEInput();
+          this.smpteInput = '';
         } else {
           console.error('Invalid timecode format');
         }
@@ -111,7 +70,6 @@ class Calculator {
         if (this.validateInput()) {
           this.processTimecode(e.key);
           this.timecode = '';
-          this.updateSMPTEInput();
         } else {
           console.error('Invalid timecode format');
         }
@@ -119,8 +77,7 @@ class Calculator {
       case 'Enter':
         if (this.validateInput()) {
           this.processTimecode(e.key);
-          this.timecode = this.total;
-          this.updateSMPTEInput();
+          this.smpteInput = this.total.timecode;
         } else {
           console.error('Invalid timecode format');
         }
@@ -142,75 +99,59 @@ class Calculator {
       timecodeRegex =
         /^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]:[0-2][0-9]$/;
     }
-    return timecodeRegex.test(this.timecode);
-  }
-
-  updateSMPTEInput() {
-    smpteInput.value = this.timecode;
+    return timecodeRegex.test(this.smpteInput);
   }
 
   updatePanel() {}
 
   processTimecode(key) {
     // Convert timecode to frames and seconds
-    const frames = this.#timecodeToFrames(this.timecode);
-    const seconds = this.#framesToSeconds(frames);
+    console.log(`Processing timecode: ${this.smpteInput}`);
+    const seconds = this.#timecodeToSeconds(this.smpteInput);
+    const stackSize = this.stack.length;
+    let ans = {};
+    // const operator = operator;
+    // Update panel with input
 
-    // Perform maths operation
-    console.log(`Current operator: ${this.operator}`);
-    switch (this.operator) {
-      case '+':
-        this.#pushToStack(this.timecode, this.totalFrames, this.totalSeconds);
-        this.#add(seconds, frames);
-        break;
-      case '-':
-        this.#pushToStack(this.timecode, this.totalFrames, this.totalSeconds);
-        this.#subtract(seconds, frames);
-      case 'Enter':
-        this.#pushToStack(this.timecode, this.totalFrames, this.totalSeconds);
-      default:
-        console.log(`No operator yet chosen.`);
-        this.total = this.timecode;
-        this.totalFrames = frames;
-        this.totalSeconds = seconds;
+    if (stackSize >= 1) {
+      // Do the maths
+      // Push to stack
+      // Update the operator
+      console.log(`Current operator: ${this.#operator}`);
+      switch (this.#operator) {
+        case '+':
+          ans = this.#secondsToTimecode(this.#add(seconds));
+          break;
+        case '-':
+        case 'Enter':
+        default:
+          console.log(`No operator yet chosen.`);
+      }
+      // Push to stack
+      this.stack.push(ans);
+    } else {
+      ans = this.#secondsToTimecode(seconds);
+      this.stack.push(ans);
+    }
+    if (key !== 'Enter') {
+      this.#operator = key;
     }
 
     this.#displayTotal();
-    this.operator = key;
-    console.log(`Updated operator to: ${this.operator}`);
   }
 
-  #add(seconds, frames) {
-    console.log(`Adding ${seconds} to ${this.#totalSeconds}`);
-    this.totalSeconds = this.totalSeconds + seconds;
-    this.totalFrames = this.totalFrames + frames;
-    this.total = this.#framesToTimecode(this.totalFrames);
-  }
-
-  #subtract(seconds, frames) {
-    this.totalSeconds = this.totalSeconds - seconds;
-    this.totalFrames = this.totalFrames - frames;
-    this.total = this.#framesToTimecode(this.totalFrames);
-  }
-
-  #pushToStack(timecode, frames, seconds) {
-    this.stack.push({
-      timecode,
-      frames,
-      seconds,
-    });
+  #add(seconds) {
+    return this.stack[this.stack.length - 1].seconds + seconds;
   }
 
   #displayTotal() {
-    console.log(`Total frames: ${this.totalFrames}`);
-    console.log(`Total seconds: ${this.totalSeconds}`);
-    if (this.stack.length >= 1) {
-      console.log(this.stack);
-    }
-    display.insertAdjacentHTML('afterbegin', `<div>Timecode: ${this.total}`);
+    display.insertAdjacentHTML(
+      'afterbegin',
+      `<div>${this.#operator} ${this.stack[this.stack.length - 1].timecode}`
+    );
   }
 
-  #timecodeToFrames(timecode) {
+  #timecodeToSeconds(timecode) {
     timecode = timecode.split(':');
     const hours = Number(timecode[0]);
     const minutes = Number(timecode[1]);
@@ -221,29 +162,34 @@ class Calculator {
       this.fps * (minutes * 60) +
       this.fps * (hours * 3600);
 
-    return frames;
+    return frames / this.fps;
   }
 
   #framesToSeconds(frames) {
     return frames / this.fps;
   }
 
-  #framesToTimecode(frames) {
-    const totalSeconds = this.#framesToSeconds(frames);
+  #secondsToFrames(seconds) {
+    // This function will eventually contain additional maths for drop-frame timecode.
+    return this.fps * seconds;
+  }
 
+  #secondsToTimecode(totalSeconds) {
+    // Get total frames
+    const totalFrames = totalSeconds * this.fps;
+    // Generate SMPTE timecode
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = Math.floor(totalSeconds % 60);
-    const frameCount = Math.round(
+    const frames = Math.round(
       (totalSeconds - Math.floor(totalSeconds)) * this.fps
     );
-
     const timecode = `${String(hours).padStart(2, '0')}:${String(
       minutes
     ).padStart(2, '0')}:${String(seconds).padStart(2, '0')}:${String(
-      frameCount
+      frames
     ).padStart(2, '0')}`;
-    return timecode;
+    return { timecode, frames: totalFrames, seconds: totalSeconds };
   }
 }
 
