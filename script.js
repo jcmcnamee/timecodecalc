@@ -1,4 +1,3 @@
-const smpteInput = document.getElementById('tcInput');
 const buttons = document.querySelectorAll('.btn');
 const keypad = document.getElementById('keypad');
 const display = document.getElementById('screen-panel');
@@ -10,63 +9,25 @@ class Calculator {
     this.fps = 25;
     this.stack = [];
     this.mode = 'timecode';
+    this.input = document.getElementById('tcInput');
 
     this.inputHandler = this.inputHandler.bind(this);
     this.keyHandler = this.keyHandler.bind(this);
 
-    smpteInput.addEventListener('input', this.inputHandler);
+    this.input.addEventListener('input', this.inputHandler);
     document.addEventListener('keydown', this.keyHandler);
   }
-  #timecode = '';
-  #operator = '';
-  #totalSeconds = null;
-  #totalFrames = null;
-  #total = '';
+  #expression = '';
 
-  // Operator set and get
-  set operator(operator) {
-    this.#operator = operator;
+  // Setters and getters
+  set smpteInput(value) {
+    this.input.value = value;
   }
-  get operator() {
-    return this.#operator;
-  }
-
-  // Current timecode set and get
-  set timecode(timecode) {
-    this.#timecode = timecode;
-  }
-  get timecode() {
-    return this.#timecode;
-  }
-
-  // Get latest stack entry
-  get latestStack() {
-    console.log(this.stack[this.stack.length - 1]);
-    return this.stack[this.stack.length - 1];
-  }
-
-  // Set answer
-  set total(total) {
-    this.#total = total;
+  get smpteInput() {
+    return this.input.value;
   }
   get total() {
-    return this.#total;
-  }
-
-  // Total frame count set and get
-  set totalFrames(frames) {
-    this.#totalFrames = frames;
-  }
-  get totalFrames() {
-    return this.#totalFrames;
-  }
-
-  // Total seconds set and get
-  set totalSeconds(seconds) {
-    this.#totalSeconds = seconds;
-  }
-  get totalSeconds() {
-    return this.#totalSeconds;
+    return this.stack[this.stack.length - 1];
   }
 
   /////////////////// Methods
@@ -92,113 +53,97 @@ class Calculator {
       }
     }
     // Update instance and UI
-    this.timecode = formattedVal;
-    this.updateSMPTEInput();
+    this.smpteInput = formattedVal;
   }
 
   keyHandler(e) {
     switch (e.key) {
       case '+':
-        if (this.validateInput()) {
-          this.processTimecode(e.key);
-          this.timecode = '';
-          this.updateSMPTEInput();
+        if (this.mode === 'timecode' && this.validateInput()) {
+          this.#expression += `${this.timecodeToSeconds()} + `;
+        } else if (this.mode === 'number') {
+          this.expression += this.smpteInput;
         } else {
           console.error('Invalid timecode format');
         }
+        this.smpteInput = '';
+        this.mode = 'timecode';
         break;
       case '-':
-        if (this.validateInput()) {
-          this.processTimecode(e.key);
-          this.timecode = '';
-          this.updateSMPTEInput();
+        if (this.mode === 'timecode' && this.validateInput()) {
+          this.#expression += `${this.timecodeToSeconds()} - `;
+        } else if (this.mode === 'number') {
+          this.expression += this.smpteInput;
         } else {
           console.error('Invalid timecode format');
         }
+        this.smpteInput = '';
+        this.mode = 'timecode';
+        break;
+      case '*':
+        if (this.mode === 'timecode' && this.validateInput()) {
+          this.#expression += `${this.timecodeToSeconds()} * `;
+        } else if (this.mode === 'number') {
+          this.expression += this.smpteInput;
+        } else {
+          console.error('Invalid timecode format');
+        }
+        this.smpteInput = '';
+        this.mode = 'number';
+        break;
+      case '/':
+        if (this.mode === 'timecode' && this.validateInput()) {
+          this.#expression += `${this.timecodeToSeconds()} / `;
+        } else if (this.mode === 'number') {
+          this.expression += this.smpteInput;
+        } else {
+          console.error('Invalid timecode format');
+        }
+        this.smpteInput = '';
+        this.mode = 'number';
+        break;
+      case '(':
+        this.#expression += ` ( `;
+        this.smpteInput = '';
+        break;
+      case ')':
+        this.#expression += `${this.timecodeToSeconds()} ) `;
+        this.smpteInput = '';
         break;
       case 'Enter':
         if (this.validateInput()) {
-          this.processTimecode(e.key);
-          this.timecode = this.total;
-          this.updateSMPTEInput();
-        } else {
-          console.error('Invalid timecode format');
+          this.#expression += `${this.timecodeToSeconds()}`;
         }
+        this.getResult();
         break;
       default:
     }
   }
 
   validateInput() {
-    let timecodeRegex = null;
+    if (this.mode === 'timecode') {
+      let timecodeRegex = null;
 
-    if (this.fps === 24) {
-      timecodeRegex =
-        /^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]:[0-2][0-3]$/;
-    } else if (this.fps === 25) {
-      timecodeRegex =
-        /^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]:[0-2][0-4]$/;
-    } else if (this.fps === 30 || this.fps === 29.97) {
-      timecodeRegex =
-        /^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]:[0-2][0-9]$/;
+      if (this.fps === 24) {
+        timecodeRegex =
+          /^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]:[0-2][0-3]$/;
+      } else if (this.fps === 25) {
+        timecodeRegex =
+          /^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]:[0-2][0-4]$/;
+      } else if (this.fps === 30 || this.fps === 29.97) {
+        timecodeRegex =
+          /^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]:[0-2][0-9]$/;
+      }
+      return timecodeRegex.test(this.smpteInput);
+    } else if (this.mode === 'number') {
+      return true;
     }
-    return timecodeRegex.test(this.timecode);
   }
 
-  updateSMPTEInput() {
-    smpteInput.value = this.timecode;
-  }
-
-  updatePanel() {}
-
-  processTimecode(key) {
+  timecodeToSeconds() {
     // Convert timecode to frames and seconds
-    const frames = this.#timecodeToFrames(this.timecode);
-    const seconds = this.#framesToSeconds(frames);
-
-    // Perform maths operation
-    console.log(`Current operator: ${this.operator}`);
-    switch (this.operator) {
-      case '+':
-        this.#pushToStack(this.timecode, this.totalFrames, this.totalSeconds);
-        this.#add(seconds, frames);
-        break;
-      case '-':
-        this.#pushToStack(this.timecode, this.totalFrames, this.totalSeconds);
-        this.#subtract(seconds, frames);
-      case 'Enter':
-        this.#pushToStack(this.timecode, this.totalFrames, this.totalSeconds);
-      default:
-        console.log(`No operator yet chosen.`);
-        this.total = this.timecode;
-        this.totalFrames = frames;
-        this.totalSeconds = seconds;
-    }
-
-    this.#displayTotal();
-    this.operator = key;
-    console.log(`Updated operator to: ${this.operator}`);
-  }
-
-  #add(seconds, frames) {
-    console.log(`Adding ${seconds} to ${this.#totalSeconds}`);
-    this.totalSeconds = this.totalSeconds + seconds;
-    this.totalFrames = this.totalFrames + frames;
-    this.total = this.#framesToTimecode(this.totalFrames);
-  }
-
-  #subtract(seconds, frames) {
-    this.totalSeconds = this.totalSeconds - seconds;
-    this.totalFrames = this.totalFrames - frames;
-    this.total = this.#framesToTimecode(this.totalFrames);
-  }
-
-  #pushToStack(timecode, frames, seconds) {
-    this.stack.push({
-      timecode,
-      frames,
-      seconds,
-    });
+    const frames = this.#timecodeToFrames(this.smpteInput);
+    return this.#framesToSeconds(frames);
   }
 
   #displayTotal() {
@@ -244,6 +189,102 @@ class Calculator {
       frameCount
     ).padStart(2, '0')}`;
     return timecode;
+  }
+
+  calculate(expression) {
+    try {
+      return this.evaluateExpression(expression);
+    } catch (error) {
+      return 'Error';
+    }
+  }
+
+  evaluateExpression(expression) {
+    const operators = [];
+    const operands = [];
+
+    //Loop over string
+    for (const token of expression.split(' ')) {
+      // If current char is a number
+      if (this.isNumber(token)) {
+        // Convert to number type, and push to operands
+        operands.push(parseFloat(token));
+        // Push any opening parenthesis to operators
+      } else if (token === '(') {
+        operators.push(token);
+        // Detect closing parenthesis
+      } else if (token === ')') {
+        // Gather the data within and perform the calculation
+        while (
+          operators.length > 0 &&
+          operators[operators.length - 1] !== '('
+        ) {
+          this.calculateOperation(operators, operands);
+        }
+        // Remove the opening parenthesis
+        operators.pop();
+        // Else if the current char is an operator
+      } else if (this.isOperator(token)) {
+        // Loop while there are operators in the stack, and the current operator is more than or equal to the
+        while (
+          operators.length > 0 &&
+          this.getPrecedence(operators[operators.length - 1]) >=
+            getPrecedence(token)
+        ) {
+          this.calculateOperation(operators, operands);
+        }
+        operators.push(token);
+      }
+    }
+
+    while (operators.length > 0) {
+      this.calculateOperation(operators, operands);
+    }
+
+    if (operands.length === 1 && operators.length === 0) {
+      return operands[0];
+    } else {
+      throw new Error('Invalid expression');
+    }
+  }
+
+  isNumber(str) {
+    return !isNaN(parseFloat(str));
+  }
+
+  isOperator(str) {
+    return ['+', '-', '*', '/'].includes(str);
+  }
+
+  getPrecedence(operator) {
+    if (operator === '+' || operator === '-') return 1;
+    if (operator === '*' || operator === '/') return 2;
+    return 0;
+  }
+
+  calculateOperation(operators, operands) {
+    const operator = operators.pop();
+    const rightOperand = operands.pop();
+    const leftOperand = operands.pop();
+
+    switch (operator) {
+      case '+':
+        operands.push(leftOperand + rightOperand);
+        break;
+      case '-':
+        operands.push(leftOperand - rightOperand);
+        break;
+      case '*':
+        operands.push(leftOperand * rightOperand);
+        break;
+      case '/':
+        operands.push(leftOperand / rightOperand);
+        break;
+    }
+  }
+
+  getResult() {
+    console.log(this.calculate(this.#expression));
   }
 }
 
