@@ -35,6 +35,8 @@
 #screen-panel {
   display: flex;
   flex-direction: column;
+
+  font-size: 2rem;
   
   background-color: slategray;
   grid-area: 1 / 4 / 7 / 4;
@@ -47,6 +49,11 @@
     transparent 6px
   );
   background-size: 4px 4px;
+}
+
+.display-item {
+  display: flex;
+  
 }
 
 #keypad {

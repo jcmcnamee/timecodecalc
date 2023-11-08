@@ -1,6 +1,5 @@
 const buttons = document.querySelectorAll('.btn');
 const keypad = document.getElementById('keypad');
-const display = document.getElementById('screen-panel');
 
 console.log(buttons);
 
@@ -10,6 +9,7 @@ class Calculator {
     this.stack = [];
     this.mode = 'timecode';
     this.input = document.getElementById('tcInput');
+    this.display = document.getElementById('screen-panel');
 
     this.inputHandler = this.inputHandler.bind(this);
     this.keyHandler = this.keyHandler.bind(this);
@@ -56,16 +56,21 @@ class Calculator {
     this.smpteInput = formattedVal;
   }
 
+  ///////////////////// PUSH TO DISPLAY NEEDS TO HAPPEN AFTER VALIDATION AND IN A BETTER WAY IN GENERAL
+  ///////////////////// VALIDATION NEEDS TO VALIDATE WHETHER ITS A TIMECODE OR A NUMBER FIRST
+  ///////////////////// AND THEN VALIDATE THE TIMECODE FORMAT
+
   keyHandler(e) {
     switch (e.key) {
       case '+':
         if (this.mode === 'timecode' && this.validateInput()) {
           this.#expression += `${this.timecodeToSeconds()} + `;
         } else if (this.mode === 'number') {
-          this.expression += this.smpteInput;
+          this.#expression += `${this.smpteInput} + `;
         } else {
           console.error('Invalid timecode format');
         }
+        this.#pushToDisplay(`${this.smpteInput} +`);
         this.smpteInput = '';
         this.mode = 'timecode';
         break;
@@ -73,10 +78,11 @@ class Calculator {
         if (this.mode === 'timecode' && this.validateInput()) {
           this.#expression += `${this.timecodeToSeconds()} - `;
         } else if (this.mode === 'number') {
-          this.expression += this.smpteInput;
+          this.#expression += `${this.smpteInput} - `;
         } else {
           console.error('Invalid timecode format');
         }
+        this.#pushToDisplay(`${this.smpteInput} -`);
         this.smpteInput = '';
         this.mode = 'timecode';
         break;
@@ -84,10 +90,11 @@ class Calculator {
         if (this.mode === 'timecode' && this.validateInput()) {
           this.#expression += `${this.timecodeToSeconds()} * `;
         } else if (this.mode === 'number') {
-          this.expression += this.smpteInput;
+          this.#expression += `${this.smpteInput} * `;
         } else {
           console.error('Invalid timecode format');
         }
+        this.#pushToDisplay(`${this.smpteInput} &times`);
         this.smpteInput = '';
         this.mode = 'number';
         break;
@@ -95,26 +102,34 @@ class Calculator {
         if (this.mode === 'timecode' && this.validateInput()) {
           this.#expression += `${this.timecodeToSeconds()} / `;
         } else if (this.mode === 'number') {
-          this.expression += this.smpteInput;
+          this.#expression += `${this.smpteInput} / `;
         } else {
           console.error('Invalid timecode format');
         }
+        this.#pushToDisplay(`${this.smpteInput} &divide`);
         this.smpteInput = '';
         this.mode = 'number';
         break;
       case '(':
         this.#expression += ` ( `;
+        this.#pushToDisplay(`( `);
         this.smpteInput = '';
         break;
       case ')':
         this.#expression += `${this.timecodeToSeconds()} ) `;
+        this.#pushToDisplay(`${this.smpteInput} )`);
         this.smpteInput = '';
         break;
       case 'Enter':
-        if (this.validateInput()) {
+        if (this.mode === 'timecode' && this.validateInput()) {
           this.#expression += `${this.timecodeToSeconds()}`;
+        } else if (this.mode === 'number') {
+          this.#expression += `${this.smpteInput}`;
+        } else {
+          console.error('Invalid timecode format');
         }
-        this.getResult();
+        this.#pushToDisplay(`${this.smpteInput} =`);
+        this.#pushToDisplay(this.#secondsToTimecode(this.getResult()));
         break;
       default:
     }
@@ -129,7 +144,7 @@ class Calculator {
           /^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]:[0-2][0-3]$/;
       } else if (this.fps === 25) {
         timecodeRegex =
-          /^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]:[0-2][0-4]$/;
+          /^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]:([0-1][0-9]|2[0-4])$/;
       } else if (this.fps === 30 || this.fps === 29.97) {
         timecodeRegex =
           /^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]:[0-2][0-9]$/;
@@ -143,16 +158,23 @@ class Calculator {
   timecodeToSeconds() {
     // Convert timecode to frames and seconds
     const frames = this.#timecodeToFrames(this.smpteInput);
+    console.log(this.#framesToSeconds(frames));
     return this.#framesToSeconds(frames);
   }
 
-  #displayTotal() {
-    console.log(`Total frames: ${this.totalFrames}`);
-    console.log(`Total seconds: ${this.totalSeconds}`);
-    if (this.stack.length >= 1) {
-      console.log(this.stack);
+  #pushToDisplay(expression) {
+    if (!this.display.querySelectorAll('div')) {
+      console.log('No divs present');
+      this.display.insertAdjacentHTML(
+        'beforeend',
+        `<div class="display-item">${expression}</div>`
+      );
+    } else {
+      this.display.insertAdjacentHTML(
+        'beforeend',
+        `<div class="display-item">${expression}</div>`
+      );
     }
-    display.insertAdjacentHTML('afterbegin', `<div>Timecode: ${this.total}`);
   }
 
   #timecodeToFrames(timecode) {
@@ -173,20 +195,20 @@ class Calculator {
     return frames / this.fps;
   }
 
-  #framesToTimecode(frames) {
-    const totalSeconds = this.#framesToSeconds(frames);
-
+  #secondsToTimecode(totalSeconds) {
+    // Get total frames
+    const totalFrames = totalSeconds * this.fps;
+    // Generate SMPTE timecode
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = Math.floor(totalSeconds % 60);
-    const frameCount = Math.round(
+    const frames = Math.round(
       (totalSeconds - Math.floor(totalSeconds)) * this.fps
     );
-
     const timecode = `${String(hours).padStart(2, '0')}:${String(
       minutes
     ).padStart(2, '0')}:${String(seconds).padStart(2, '0')}:${String(
-      frameCount
+      frames
     ).padStart(2, '0')}`;
     return timecode;
   }
@@ -225,7 +247,7 @@ class Calculator {
         operators.pop();
         // Else if the current char is an operator
       } else if (this.isOperator(token)) {
-        // Loop while there are operators in the stack, and the current operator is more than or equal to the
+        // Loop while there are operators in the stack, and the latest operator is equal to or greater than the current token.
         while (
           operators.length > 0 &&
           this.getPrecedence(operators[operators.length - 1]) >=
@@ -285,6 +307,7 @@ class Calculator {
 
   getResult() {
     console.log(this.calculate(this.#expression));
+    return this.calculate(this.#expression);
   }
 }
 
