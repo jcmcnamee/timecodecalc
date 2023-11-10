@@ -6,42 +6,59 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Timecode Calculator</title>
     <link rel="stylesheet" href="styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
     <main>
       <nav class="nav"></nav>
-      <div id="calc-container">
-        <div class="calc">
-          <div id="input-panel">
-            <input type="text" name="tcInput" id="tcInput" autofocus />
-          </div>
-          <div id="options-panel">
-            <select name="fpsChoice">
-              <option value="fps25">25</option>
-              <option value="fps24">24</option></select
-            >: FPS
-          </div>
-          <div id="keypad">
+      <div id="main-grid">
+        <div id="calc-container">
+          <div id="calc">
+            <div id="input-panel">
+              <input
+                type="text"
+                name="tcInput"
+                id="tcInput"
+                class="lcd-bg"
+                autofocus
+              />
+            </div>
+            <div id="options-panel">
+              <div>
+                <select name="fpsChoice">
+                  <option value="fps25">25</option>
+                  <option value="fps24">24</option></select
+                >: FPS
+              </div>
+              <h1>Timecode Calculator</h1>
+            </div>
             <div class="btn" id="btn7"><button>7</button></div>
             <div class="btn" id="btn8"><button>8</button></div>
             <div class="btn" id="btn9"><button>9</button></div>
+            <div class="btn" id="clr"><button>C</button></div>
+            <div class="btn" id="allClr"><button>AC</button></div>
             <div class="btn" id="btn4"><button>4</button></div>
             <div class="btn" id="btn5"><button>5</button></div>
             <div class="btn" id="btn6"><button>6</button></div>
+            <div class="btn" id="btnMult"><button>&times</button></div>
+            <div class="btn" id="btnDiv"><button>&divide</button></div>
             <div class="btn" id="btn1"><button>1</button></div>
             <div class="btn" id="btn2"><button>2</button></div>
             <div class="btn" id="btn3"><button>3</button></div>
+            <div class="btn" id="btnPlus"><button>+</button></div>
+            <div class="btn" id="btnMinus"><button>-</button></div>
             <div class="btn" id="btn0"><button>0</button></div>
-            <div id="opButtons">
-              <div class="btn" id="btnPlus"><button>+</button></div>
-              <div class="btn" id="btnMinus"><button>-</button></div>
-              <div class="btn" id="btnMult"><button>&times</button></div>
-              <div class="btn" id="btnDiv"><button>&divide</button></div>
-            </div>
             <div class="btn" id="btnPnt"><button>.</button></div>
+            <div class="btn" id="leftBr"><button>(</button></div>
+            <div class="btn" id="rightBr"><button>)</button></div>
             <div class="btn" id="btnEquals"><button>=</button></div>
           </div>
-          <div id="screen-panel"></div>
+          <div id="screen-panel" class="lcd-bg"><div></div></div>
         </div>
       </div>
     </main>

@@ -1,8 +1,3 @@
-const buttons = document.querySelectorAll('.btn');
-const keypad = document.getElementById('keypad');
-
-console.log(buttons);
-
 class Calculator {
   constructor() {
     this.fps = 25;
@@ -10,12 +5,16 @@ class Calculator {
     this.mode = 'timecode';
     this.input = document.getElementById('tcInput');
     this.display = document.getElementById('screen-panel');
+    this.buttons = document.querySelectorAll('.btn');
+    this.keypad = document.getElementById('calc');
 
     this.inputHandler = this.inputHandler.bind(this);
     this.keyHandler = this.keyHandler.bind(this);
+    this.buttonHandler = this.buttonHandler.bind(this);
 
     this.input.addEventListener('input', this.inputHandler);
     document.addEventListener('keydown', this.keyHandler);
+    this.keypad.addEventListener('click', this.buttonHandler);
   }
   #expression = '';
 
@@ -61,6 +60,7 @@ class Calculator {
   ///////////////////// AND THEN VALIDATE THE TIMECODE FORMAT
 
   keyHandler(e) {
+    console.log(e);
     switch (e.key) {
       case '+':
         if (this.mode === 'timecode' && this.validateInput()) {
@@ -121,6 +121,9 @@ class Calculator {
         this.smpteInput = '';
         break;
       case 'Enter':
+      case '=':
+        // IF THIS.SMPTEINPUT IS EITHER A NUMBER OR A TIMECODE
+        // ELSE IF ITS A CLOSING BRACKET
         if (this.mode === 'timecode' && this.validateInput()) {
           this.#expression += `${this.timecodeToSeconds()}`;
         } else if (this.mode === 'number') {
@@ -133,6 +136,24 @@ class Calculator {
         break;
       default:
     }
+  }
+
+  buttonHandler(e) {
+    // Buttons update the smpteInput and then trigger
+    // the event from there to use the input logic.
+    // Update input UI:
+    this.smpteInput += e.target.innerHTML;
+    // Create a new 'input' event.
+    const inputEvent = new Event('input');
+
+    // Trigger event
+    this.input.dispatchEvent(inputEvent);
+
+    // Do the same but send operators to keyHandler
+    const keydownEvent = new KeyboardEvent('keydown', {
+      key: e.target.innerHTML,
+    });
+    document.dispatchEvent(keydownEvent);
   }
 
   validateInput() {
@@ -251,7 +272,7 @@ class Calculator {
         while (
           operators.length > 0 &&
           this.getPrecedence(operators[operators.length - 1]) >=
-            getPrecedence(token)
+            this.getPrecedence(token)
         ) {
           this.calculateOperation(operators, operands);
         }
@@ -312,16 +333,3 @@ class Calculator {
 }
 
 const calc = new Calculator();
-
-keypad.addEventListener('click', function (e) {
-  // Buttons update the smpteInput and then trigger
-  // the event from there to use the input logic.
-  // Update input UI:
-  smpteInput.value += e.target.innerHTML;
-
-  // Create a new 'input' event.
-  const inputEvent = new Event('input');
-
-  // Trigger event
-  smpteInput.dispatchEvent(inputEvent);
-});
