@@ -57,14 +57,29 @@ h1 {
 }
 
 #screen-panel {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr 1fr 8fr 1fr;
+  grid-template-rows: min-content;
+  grid-auto-rows: min-content;
+
   grid-area: 1 / 2;
   font-size: 2rem;
 }
 
-.display-item {
-  display: flex;
+.output-timecode {
+  grid-column: 3;
+}
+
+.output-operator {
+  grid-column: 1;
+}
+
+.output-openingbracket {
+  grid-column: 2;
+}
+
+.output-closingbracket {
+  grid-column: 4;
 }
 
 .btn button {

@@ -1,7 +1,7 @@
 class Calculator {
   constructor() {
     this.fps = 25;
-    this.stack = [];
+    this.ans = null;
     this.mode = 'timecode';
     this.input = document.getElementById('tcInput');
     this.display = document.getElementById('screen-panel');
@@ -32,24 +32,28 @@ class Calculator {
   /////////////////// Methods
   inputHandler(e) {
     // Store value and remove any non-numerical characters and update.
-    const value = e.target.value.replace(/[^0-9]/g, '');
+    const value = e.target.value.replace(/[^0-9.]/g, '');
     // Initialise output
     let formattedVal = '';
-    // Loop over the string
-    if (value.length > 0) {
-      // Loop over string
-      for (let i = 0; i < value.length; i++) {
-        // If time for a colon add it
-        if (i === 2 || i === 4 || i === 6) {
-          formattedVal += ':';
+    if (this.mode === 'timecode') {
+      // Loop over the string
+      if (value.length > 0) {
+        // Loop over string
+        for (let i = 0; i < value.length; i++) {
+          // If time for a colon add it
+          if (i === 2 || i === 4 || i === 6) {
+            formattedVal += ':';
+          }
+          // Add value from event to output string
+          formattedVal += value[i];
         }
-        // Add value from event to output string
-        formattedVal += value[i];
+        // Prevent input over 11 characters
+        if (formattedVal.length > 11) {
+          formattedVal = formattedVal.slice(0, 11);
+        }
       }
-      // Prevent input over 11 characters
-      if (formattedVal.length > 11) {
-        formattedVal = formattedVal.slice(0, 11);
-      }
+    } else if (this.mode === 'number') {
+      formattedVal += value;
     }
     // Update instance and UI
     this.smpteInput = formattedVal;
@@ -60,82 +64,81 @@ class Calculator {
   ///////////////////// AND THEN VALIDATE THE TIMECODE FORMAT
 
   keyHandler(e) {
-    console.log(e);
+    console.log(e.key);
     switch (e.key) {
       case '+':
-        if (this.mode === 'timecode' && this.validateInput()) {
-          this.#expression += `${this.timecodeToSeconds()} + `;
-        } else if (this.mode === 'number') {
-          this.#expression += `${this.smpteInput} + `;
-        } else {
-          console.error('Invalid timecode format');
-        }
-        this.#pushToDisplay(`${this.smpteInput} +`);
+        this.updateExpression('+');
+        this.#pushToDisplay('+', this.smpteInput);
         this.smpteInput = '';
-        this.mode = 'timecode';
+
         break;
       case '-':
-        if (this.mode === 'timecode' && this.validateInput()) {
-          this.#expression += `${this.timecodeToSeconds()} - `;
-        } else if (this.mode === 'number') {
-          this.#expression += `${this.smpteInput} - `;
-        } else {
-          console.error('Invalid timecode format');
-        }
-        this.#pushToDisplay(`${this.smpteInput} -`);
+        this.updateExpression('-');
+        this.#pushToDisplay('-', this.smpteInput);
         this.smpteInput = '';
-        this.mode = 'timecode';
         break;
       case '*':
-        if (this.mode === 'timecode' && this.validateInput()) {
-          this.#expression += `${this.timecodeToSeconds()} * `;
-        } else if (this.mode === 'number') {
-          this.#expression += `${this.smpteInput} * `;
-        } else {
-          console.error('Invalid timecode format');
-        }
-        this.#pushToDisplay(`${this.smpteInput} &times`);
+        this.updateExpression('*');
+        this.#pushToDisplay('&times', this.smpteInput);
         this.smpteInput = '';
-        this.mode = 'number';
+        // this.mode = 'number';
         break;
       case '/':
-        if (this.mode === 'timecode' && this.validateInput()) {
-          this.#expression += `${this.timecodeToSeconds()} / `;
-        } else if (this.mode === 'number') {
-          this.#expression += `${this.smpteInput} / `;
-        } else {
-          console.error('Invalid timecode format');
-        }
-        this.#pushToDisplay(`${this.smpteInput} &divide`);
+        this.updateExpression('/');
+        this.#pushToDisplay('&divide', this.smpteInput);
         this.smpteInput = '';
-        this.mode = 'number';
+        // this.mode = 'number';
         break;
       case '(':
         this.#expression += ` ( `;
-        this.#pushToDisplay(`( `);
+        this.#pushToDisplay('(');
         this.smpteInput = '';
         break;
       case ')':
-        this.#expression += `${this.timecodeToSeconds()} ) `;
-        this.#pushToDisplay(`${this.smpteInput} )`);
+        this.updateExpression(')');
+        this.#pushToDisplay(')', this.smpteInput);
         this.smpteInput = '';
+        break;
+      case '.':
+        this.mode = 'number';
         break;
       case 'Enter':
       case '=':
-        // IF THIS.SMPTEINPUT IS EITHER A NUMBER OR A TIMECODE
-        // ELSE IF ITS A CLOSING BRACKET
-        if (this.mode === 'timecode' && this.validateInput()) {
-          this.#expression += `${this.timecodeToSeconds()}`;
-        } else if (this.mode === 'number') {
-          this.#expression += `${this.smpteInput}`;
-        } else {
-          console.error('Invalid timecode format');
+        if (this.#expression[this.#expression.length - 2] !== ')') {
+          this.updateExpression();
         }
-        this.#pushToDisplay(`${this.smpteInput} =`);
-        this.#pushToDisplay(this.#secondsToTimecode(this.getResult()));
+        this.#pushToDisplay('=', this.smpteInput);
+        this.ans = this.calculate(this.#expression);
+        this.#expression = '';
+        this.smpteInput = this.#secondsToTimecode(this.ans);
+        this.#pushToDisplay('', this.#secondsToTimecode(this.ans));
+        this.mode = 'timecode';
+        break;
+      case 'C':
+      case 'Escape':
+        this.smpteInput = '';
+        break;
+      case 'AC':
+      case 'Delete':
+        this.init();
         break;
       default:
     }
+  }
+
+  updateExpression(op = '') {
+    if (this.validateInput() === 'timecode') {
+      this.#expression += `${this.timecodeToSeconds()} ${op} `;
+    } else if (this.validateInput() === 'number') {
+      this.#expression += `${this.smpteInput} ${op} `;
+    }
+  }
+
+  init() {
+    this.mode = 'timecode';
+    this.smpteInput = '';
+    this.#expression = '';
+    this.display.innerHTML = '';
   }
 
   buttonHandler(e) {
@@ -157,44 +160,68 @@ class Calculator {
   }
 
   validateInput() {
-    if (this.mode === 'timecode') {
-      let timecodeRegex = null;
+    const numRegex = /^\d{1,2}(\.\d{1,2})?$/;
+    let timecodeRegex = '';
 
-      if (this.fps === 24) {
-        timecodeRegex =
-          /^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]:[0-2][0-3]$/;
-      } else if (this.fps === 25) {
-        timecodeRegex =
-          /^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]:([0-1][0-9]|2[0-4])$/;
-      } else if (this.fps === 30 || this.fps === 29.97) {
-        timecodeRegex =
-          /^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]:[0-2][0-9]$/;
-      }
-      return timecodeRegex.test(this.smpteInput);
-    } else if (this.mode === 'number') {
-      return true;
+    if (this.fps === 24) {
+      timecodeRegex =
+        /^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]:[0-2][0-3]$/;
+    } else if (this.fps === 25) {
+      timecodeRegex =
+        /^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]:([0-1][0-9]|2[0-4])$/;
+    } else if (this.fps === 30 || this.fps === 29.97) {
+      timecodeRegex =
+        /^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]:[0-2][0-9]$/;
+    }
+
+    // if (this.mode === 'timecode' && timecodeRegex.test(this.smpteInput)) {
+    //   return this.mode;
+    // } else if (this.mode === 'number') {
+    //   return 'number';
+    // } else {
+    //   alert('Invalid input.');
+    // }
+
+    if (timecodeRegex.test(this.smpteInput)) {
+      return 'timecode';
+    } else if (numRegex.test(this.smpteInput)) {
+      return 'number';
+    } else {
+      alert('Invalid input!');
     }
   }
 
   timecodeToSeconds() {
     // Convert timecode to frames and seconds
     const frames = this.#timecodeToFrames(this.smpteInput);
-    console.log(this.#framesToSeconds(frames));
     return this.#framesToSeconds(frames);
   }
 
-  #pushToDisplay(expression) {
-    if (!this.display.querySelectorAll('div')) {
-      console.log('No divs present');
+  #pushToDisplay(operator, timecode) {
+    if (timecode) {
       this.display.insertAdjacentHTML(
         'beforeend',
-        `<div class="display-item">${expression}</div>`
+        `<div class="output-timecode">${timecode}</div>`
       );
+
+      if (operator === ')') {
+        this.display.insertAdjacentHTML(
+          'beforeend',
+          `<div class="output-closingbracket">${operator}</div>`
+        );
+      } else {
+        this.display.insertAdjacentHTML(
+          'beforeend',
+          `<div class="output-operator">${operator}</div>`
+        );
+      }
     } else {
-      this.display.insertAdjacentHTML(
-        'beforeend',
-        `<div class="display-item">${expression}</div>`
-      );
+      if (operator === '(') {
+        this.display.insertAdjacentHTML(
+          'beforeend',
+          `<div class="output-openingbracket">${operator}</div>`
+        );
+      }
     }
   }
 
@@ -324,11 +351,6 @@ class Calculator {
         operands.push(leftOperand / rightOperand);
         break;
     }
-  }
-
-  getResult() {
-    console.log(this.calculate(this.#expression));
-    return this.calculate(this.#expression);
   }
 }
 
